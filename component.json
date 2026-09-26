@@ -1,0 +1,42 @@
+{
+  "name": "clutch-websearch",
+  "version": "0.1.0",
+  "interface": "cli",
+  "subject": "network",
+  "launch": {
+    "argv": ["{py}", "{script}"],
+    "entry": "websearch.py"
+  },
+  "requires": ["python"],
+  "ui": { "label": "web access", "status": true },
+  "tools": [
+    {
+      "name": "web_search",
+      "description": "Search the web for information the workspace cannot answer: current events, library versions and release notes, error messages, docs pages. Returns ranked results (title, URL, snippet); follow up with web_fetch on the 1-2 most relevant URLs for the full text. query is the search string — engine syntax like quoted phrases, site: and -term filters work; short factual queries beat long sentences. max_results caps entries (default $config.web_search_max_results). Backends available on this machine ($backends) are tried in order — the first that returns results wins; when all fail the error lists each backend's reason, and backend=<name> pins one.",
+      "parameters": {
+        "properties": {
+          "query": { "type": "string", "description": "search string (engine syntax like site: and quoted phrases works)" },
+          "max_results": { "type": "integer", "description": "cap on returned entries (default $config.web_search_max_results)" },
+          "backend": { "type": "string", "description": "pin one backend: $backends (default: fall through the chain)" }
+        },
+        "required": ["query"]
+      },
+      "command": "search --envelope [--max-results {max_results}] [--backend {backend}] {query}",
+      "defaults": { "max_results": "$config.web_search_max_results" }
+    },
+    {
+      "name": "web_fetch",
+      "description": "Fetch a web page by URL and return its readable text (title + body; scripts, styles and site chrome stripped). HTML pages and raw text/JSON responses both work; binary types are refused. max_chars caps the returned text (default $config.read_max_chars) and start skips ahead in characters — when content is truncated the tail note gives the exact next start value. Non-public hosts (localhost, LAN IPs) are refused. Prefer 1-2 targeted fetches over many: search first with web_search, then fetch only the promising URLs.",
+      "parameters": {
+        "properties": {
+          "url": { "type": "string", "description": "http(s) URL to fetch" },
+          "max_chars": { "type": "integer", "description": "max chars of extracted text to return (default $config.read_max_chars)" },
+          "start": { "type": "integer", "description": "0-based char offset to continue a truncated fetch" }
+        },
+        "required": ["url"]
+      },
+      "command": "fetch --envelope [--max-chars {max_chars}] [--start {start}] {url}",
+      "defaults": { "max_chars": "$config.read_max_chars" }
+    }
+  ]
+}
