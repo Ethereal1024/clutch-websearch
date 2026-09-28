@@ -48,7 +48,8 @@ Other environment: `CLUTCH_WEBSEARCH_TIMEOUT` (15.0 s),
 
 ## Postmortem fixes carried over
 
-`WEBSEARCH_POSTMORTEM.md` (the SRU 404 event) drives four of these:
+The SRU 404 event (2026-09; its postmortem lives in the host repo's git
+history) drives four of these:
 
 - **P0 link-preserving extraction**: `_TextExtractor` renders anchors as
   `[text](url)`, so a caller never invents a URL from a button label — losing

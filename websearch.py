@@ -33,7 +33,7 @@ Poka-yoke — make it hard for the caller to misuse (all four are contract):
 - error-as-data: backend failures list each reason; a truncating fetch says how
   to fetch the next slice, mirroring read_file's offset hints
 
-Fixes carried over from WEBSEARCH_POSTMORTEM.md (the SRU 404 event):
+Fixes carried over from the SRU 404 event's postmortem (2026-09):
 - P0  link-preserving extraction: `_TextExtractor` renders anchors as
       `[text](url)`, so the caller never has to invent a URL from a button
       label. Losing hrefs is what made a model guess an owner and report four
