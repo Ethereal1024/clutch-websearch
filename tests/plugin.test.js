@@ -360,11 +360,45 @@ async function checkPageFetches(base) {
   check(/^ERROR: non-public host refused: 127\.0\.0\.1/.test(refused.content), "and without the hatch the same URL is refused, naming the host");
 }
 
+// ---- the built modules -------------------------------------------------------
+
+// The shipped .js are generated from plugin/src/, and they are what a client
+// runs, so "are they current" belongs in this suite and not only in the release
+// job: a source edited without a rebuild fails HERE, on a laptop, before a tag.
+function checkBuild() {
+  const fs = require("fs");
+  const build = require(path.join(__dirname, "..", "scripts", "build-plugin.js"));
+  const sources = build.sources();
+  check(
+    ["backends.ts", "html.ts", "http.ts", "index.ts"].every((name) => sources.includes(name)),
+    "the build sees every source it emits"
+  );
+  const stale = [];
+  for (const name of sources) {
+    const out = path.join(PLUGIN, name.replace(/\.ts$/, ".js"));
+    const text = fs.existsSync(out) ? fs.readFileSync(out, "utf8") : "";
+    const recorded = (/^\/\/ source sha256: ([0-9a-f]{64})$/m.exec(text) || [])[1];
+    if (recorded !== build.digestOf(fs.readFileSync(path.join(PLUGIN, "src", name), "utf8"))) stale.push(name);
+  }
+  check(stale.length === 0, `every emitted module carries its source's digest${stale.length ? ` (${stale.join(", ")})` : ""}`);
+  check(
+    build.emittedFiles().join(",") === sources.map((name) => name.replace(/\.ts$/, ".js")).sort().join(","),
+    "…and none without a source (no orphan in the artifact)"
+  );
+  // The artifact really is component.json plus these four modules: git enforces
+  // that at archive time, so the rule is asserted where it lives.
+  check(
+    /^src\/ export-ignore$/m.test(fs.readFileSync(path.join(PLUGIN, ".gitattributes"), "utf8")),
+    "the sources are not part of the artifact"
+  );
+}
+
 // ---- main ---------------------------------------------------------------------
 
 async function main() {
   const net = await stub();
   try {
+    checkBuild();
     checkExtraction();
     checkParsers();
     checkGuard();

@@ -1,0 +1,48 @@
+{
+  // clutch-websearch's plugin: plugin/src/*.ts compiled IN PLACE to plugin/*.js.
+  //
+  // In place because plugin/ IS the released artifact: `git archive HEAD:plugin`
+  // puts its members at the tar's top level, the client loads `entry` beside the
+  // declaration, and a client's embedded node (18.x, on the phone) cannot strip
+  // types. So the emitted .js are committed, exactly like ui/*.js in the parent
+  // repository, and `scripts/build-plugin.js --check` is the gate that refuses a
+  // release whose .js are older than their sources — without needing tsc, which
+  // the release workflow does not install.
+  //
+  // `moduleDetection: "force"` for the same reason as the parent's host tree:
+  // these modules carry no import/export syntax (they are CommonJS: `require` in,
+  // `module.exports` out), so without it the compiler would read every file as a
+  // global script and report each shared top-level name as a redeclaration.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "moduleDetection": "force",
+    "types": ["node"],
+    // This repository ships with no npm install at all (the plugin imports
+    // nothing, and its tests run on a stock node). The type definitions are
+    // therefore looked up in the two places a checkout can find them: its own
+    // node_modules (a maintainer who ran `npm i -D typescript @types/node`), and
+    // the parent repository's, when this tree is checked out inside Clutch —
+    // which has exactly one pinned TypeScript install for every tree it builds.
+    // A typeRoots entry that does not exist is ignored, so the second line costs
+    // a standalone clone nothing.
+    "typeRoots": ["node_modules/@types", "../ui/node_modules/@types"],
+    "rootDir": "plugin/src",
+    "outDir": "plugin",
+    // strict:false is the RATCHET, not the goal: this tree was converted in one
+    // pass, and the order is the same one ui/tsconfig.host.json records — get the
+    // build and the suite green, land the annotations, then flip this line. What
+    // is annotated already is checked; what is not is visible here.
+    "strict": false,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": false,
+    "sourceMap": false,
+    "removeComments": false
+  },
+  "include": ["plugin/src/*.ts"],
+  // outDir is the source's parent, so without this tsc would exclude itself.
+  "exclude": ["node_modules"]
+}

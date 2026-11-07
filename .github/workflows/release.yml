@@ -54,6 +54,15 @@ jobs:
       - name: Tests
         run: node tests/plugin.test.js
 
+      # The artifact ships the COMPILED plugin (`git archive HEAD:plugin` below),
+      # so this is the gate that refuses a release whose committed .js are older
+      # than the .ts they are made from. It is deliberately tsc-free — this job
+      # installs nothing, and the emitted files carry their source's sha256 — so a
+      # source edited without a rebuild fails HERE instead of shipping a client the
+      # previous release's module.
+      - name: The emitted modules match plugin/src/
+        run: node scripts/build-plugin.js --check
+
       # `git archive` of the tagged commit's plugin/ tree: members sit at the
       # archive's TOP level, because the install directory IS the plugin's own
       # directory (a client loading `entry` beside its declaration refuses a

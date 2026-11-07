@@ -4,3 +4,8 @@
 .github/ export-ignore
 scripts/ export-ignore
 .gitattributes export-ignore
+# The build and the config that emits plugin/*.js from plugin/src/*.ts, at the
+# root where a build belongs. The rule that keeps those sources out of the
+# artifact is plugin/.gitattributes, not this line — an archive of a subtree
+# never reads this file, and one fact gets one home.
+tsconfig.plugin.json export-ignore

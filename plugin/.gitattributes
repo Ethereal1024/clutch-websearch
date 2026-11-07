@@ -1,0 +1,13 @@
+# The release artifact is THIS directory: `git archive HEAD:plugin`, so a rule
+# that must hold for the artifact has to live here — an archive of a subtree
+# reads the .gitattributes files inside that subtree, and never sees the one at
+# the repository root. Both rules below are therefore this directory's own:
+#
+#   src/            the TypeScript the .js are made from. The artifact ships the
+#                   emitted modules (a client's own node cannot strip types), and
+#                   each of them names its source in its banner, so the sources
+#                   are dev material: `git archive HEAD:plugin` is
+#                   component.json + index.js + the three modules it requires.
+#   .gitattributes  this file, which is the rule itself and ships nowhere.
+src/ export-ignore
+.gitattributes export-ignore
