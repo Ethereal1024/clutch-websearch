@@ -5,16 +5,23 @@ Usage: release-manifest.py <artifact> <declaration> <out.json> [--asset NAME]
 
 The manifest says what a release IS and where its bytes are:
 
-    {"schema": 1, "name": ..., "interface": ..., "version": ...,
+    {"schema": 1, "name": ..., "version": ...,
      "declaration": {"asset": "component.json", "sha256": "<64 hex>"},
      "artifacts": {"any": {"asset": "clutch-<name>.tar.gz", "sha256": "<64 hex>"}}}
+
+The declaration itself is the interface: the host reads the tools, their
+parameters and the entry from it, and refuses a declaration that still spells a
+word the host retired (`interface`, `runs_on`). So the manifest says nothing
+about the shape of the thing it points at — only what it is, what version, and
+the two digests that pin it.
 
 Assets are named RELATIVE to the manifest (the release that holds it), so this
 script never needs to know its own URL: the same manifest works from a GitHub
 release, a mirror, or a directory on disk. `any` is the artifact key a
-platform-independent build uses — this component is pure Python (stdlib only),
-so one tar serves every machine; a platform-specific build would add keys like
-`linux-x86_64` beside it (the host's COMPONENTS.md §一 has the vocabulary).
+platform-independent build uses — this component's artifact is a plugin
+directory of plain JavaScript with no installed dependencies, so one tar serves
+every machine; a platform-specific build would add keys like `linux-x86_64`
+beside it (the host's COMPONENTS.md §一 has the vocabulary).
 
 Both digests are sha256 of the BYTES as published: the client verifies the
 artifact it downloads against `artifacts` before handing anything to a host, and
@@ -32,7 +39,7 @@ import sys
 from pathlib import Path
 
 SCHEMA = 1
-REQUIRED = ("name", "interface", "version")
+REQUIRED = ("name", "version")
 
 
 def digest(path: Path) -> str:
@@ -69,7 +76,6 @@ def main() -> int:
     manifest = {
         "schema": SCHEMA,
         "name": declared["name"],
-        "interface": declared["interface"],
         "version": declared["version"],
         "declaration": {"asset": args.declaration.name, "sha256": digest(args.declaration)},
         "artifacts": {"any": {"asset": args.asset or args.artifact.name, "sha256": digest(args.artifact)}},
