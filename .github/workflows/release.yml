@@ -1,16 +1,20 @@
 # This component's whole release. A tag names a version, and the release carries
-# everything a client needs to install this component on a MACHINE:
+# everything a CLIENT needs to install this plugin on the client's own machine:
 #
-#   clutch-websearch.tar.gz  the artifact: this repo's tree, top level as its root
+#   clutch-websearch.tar.gz  the artifact: plugin/'s members at the tar's TOP
+#                            level (component.json + the four .js files) — the
+#                            install directory IS the plugin's directory
 #   component.json           the declaration, as published (it also travels inside
-#                            the tar; publishing it beside the manifest is what lets
-#                            a client hand a host the declaration without the bytes)
+#                            the tar; publishing it beside the manifest is what
+#                            lets a client read what a plugin contributes without
+#                            unpacking its bytes)
 #   clutch-component.json    the manifest naming both, with their sha256
 #
 # The HOST repo holds none of this. It stores one URL — this release's manifest —
-# in ui/components.sources.json, and that is the entire coupling between the two
-# (host's COMPONENTS.md §一). So this workflow owns the artifact's shape, the
-# digest that pins it, and the version it declares: nothing here asks the host.
+# as this module's line in market/entries.json, and scripts/market_index.py turns
+# those lines into the one index every client reads. So this workflow owns the
+# artifact's shape, the digest that pins it, and the version it declares: nothing
+# here asks the host.
 #
 # `permissions: contents: write` is all a release needs — the run's own
 # GITHUB_TOKEN may create one, no personal token and no third-party action.
@@ -29,45 +33,54 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # The manifest's version comes from component.json, so the tag must agree
+      # The plugin is Node and imports nothing: the tests run on a stock node,
+      # with no npm install and no lockfile to drift.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # The manifest's version comes from the declaration, so the tag must agree
       # with it: a release whose tag says one thing and whose declaration says
       # another is not reproducible, and the manifest would be the lie.
       - name: The tag and the declaration name the same version
         run: |
           set -euo pipefail
-          declared="$(python3 -c 'import json;print(json.load(open("component.json"))["version"])')"
+          declared="$(python3 -c 'import json;print(json.load(open("plugin/component.json"))["version"])')"
           if [ "v$declared" != "${GITHUB_REF_NAME}" ]; then
-            echo "tag ${GITHUB_REF_NAME} does not match component.json ${declared}" >&2
+            echo "tag ${GITHUB_REF_NAME} does not match plugin/component.json ${declared}" >&2
             exit 1
           fi
 
       - name: Tests
-        run: |
-          set -euo pipefail
-          python3 -m pip install --quiet pytest
-          python3 -m pytest -q
+        run: node tests/plugin.test.js
 
-      # `git archive` of the tagged commit: members sit at the archive's TOP
-      # level, because the install directory IS the component's own directory
-      # (the host unpacking members elsewhere refuses the archive). Tracked files
-      # only, so no venv, no cache, no editor leftovers can ride along.
+      # `git archive` of the tagged commit's plugin/ tree: members sit at the
+      # archive's TOP level, because the install directory IS the plugin's own
+      # directory (a client loading `entry` beside its declaration refuses a
+      # nested layout). Tracked files only, so no node_modules, no cache, no
+      # editor leftovers can ride along.
       - name: The artifact
         run: |
           set -euo pipefail
-          git archive --format=tar.gz --output=clutch-websearch.tar.gz HEAD
+          git archive --format=tar.gz --output=clutch-websearch.tar.gz HEAD:plugin
           # List it whole — NOT through `head`: `set -o pipefail` above turns the
           # SIGPIPE that `head` leaves behind (tar exits 141 once the reader is
-          # gone) into a failed step, so a component with more members than the
+          # gone) into a failed step, so a plugin with more members than the
           # reader asked for would fail its own release.
           tar -tzf clutch-websearch.tar.gz
 
+      # The manifest names the declaration by its ASSET name, and that name is
+      # what a client asks the release for — so the published copy is a plain
+      # `component.json` at the release's root, exactly as it sat at a component's
+      # root before the code moved under plugin/.
       - name: The manifest
         run: |
           set -euo pipefail
+          cp plugin/component.json component.json
           python3 scripts/release-manifest.py clutch-websearch.tar.gz component.json clutch-component.json
           cat clutch-component.json
 
-      # `latest` in the host's source URL is GitHub's latest non-prerelease
+      # `latest` in a client's source URL is GitHub's latest non-prerelease
       # release, which is exactly what this creates: a full release, not a draft,
       # not a pre-release. Publish it only when both digests are in hand.
       - name: Publish

@@ -1,7 +1,6 @@
-# The release artifact is the component itself. `git archive` honours these, so
-# the release tooling — and this file — never rides along into a user's machine.
-# `.gitignore`/`pyproject.toml`/`tests/` stay: the artifact is then the same set
-# of files a dev checkout tar carries (host's scripts/build-component-tar.sh).
+# The release artifact is the component itself: `git archive HEAD:plugin`, whose
+# members are the plugin's own tree and nothing else. These rules keep a dev
+# `git archive HEAD` equally free of the release tooling — and of this file.
 .github/ export-ignore
 scripts/ export-ignore
 .gitattributes export-ignore
